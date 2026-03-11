@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>WA Reaction</title>
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060608;
+  --s1:#0e0e14;
+  --s2:#14141e;
+  --s3:#1a1a28;
+  --border:#22223a;
+  --border2:#2e2e50;
+  --green:#00ff88;
+  --green2:#00cc6a;
+  --green3:#00ff8822;
+  --blue:#4d9fff;
+  --purple:#9d7bff;
+  --red:#ff4d6d;
+  --yellow:#ffd166;
+  --text:#f0f0ff;
+  --muted:#5a5a80;
+  --muted2:#3a3a60;
+  --r:14px;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding:16px 14px 80px;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%,#00ff8806,transparent),
+    radial-gradient(ellipse 40% 40% at 90% 90%,#4d9fff05,transparent),
+    radial-gradient(ellipse 40% 30% at 10% 80%,#9d7bff04,transparent);
+  pointer-events:none;
+}
+.wrap{max-width:420px;margin:0 auto;position:relative;z-index:1;}
+
+/* HEADER */
+.header{text-align:center;padding:24px 0 20px;}
+.logo{
+  width:68px;height:68px;margin:0 auto 14px;
+  background:linear-gradient(135deg,#00ff88,#00cc6a);
+  border-radius:22px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 1px #00ff8830, 0 0 40px #00ff8825, 0 8px 32px #00000060;
+  animation:float 4s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.logo svg{width:36px;height:36px;}
+.header h1{font-size:28px;font-weight:800;letter-spacing:-0.8px;margin-bottom:4px;}
+.header h1 em{color:var(--green);font-style:normal;}
+.header p{color:var(--muted);font-size:13px;}
+
+/* STATUS */
+.status-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 16px;border-radius:12px;
+  margin-bottom:14px;font-weight:600;font-size:13px;
+  border:1px solid transparent;
+  transition:all 0.4s ease;
+}
+.status-bar .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.s-disconnected{background:#110808;border-color:#3a1020;color:#ff6b8a;}
+.s-disconnected .dot{background:#ff4d6d;box-shadow:0 0 6px #ff4d6d;}
+.s-qr{background:#080b14;border-color:#102040;color:#7ab8ff;}
+.s-qr .dot{background:#4d9fff;box-shadow:0 0 6px #4d9fff;animation:blink 1s infinite;}
+.s-authenticated{background:#0e0814;border-color:#281060;color:#c4a8ff;}
+.s-authenticated .dot{background:#9d7bff;box-shadow:0 0 6px #9d7bff;animation:blink 0.7s infinite;}
+.s-ready{background:#061410;border-color:#003d22;color:#00ff88;}
+.s-ready .dot{background:#00ff88;box-shadow:0 0 8px #00ff88;}
+.s-failed{background:#110808;border-color:#3a1020;color:#ff6b8a;}
+.s-failed .dot{background:#ff4d6d;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+
+/* LOADING */
+.loading-wrap{margin-bottom:14px;display:none;}
+.loading-track{height:2px;background:var(--s3);border-radius:99px;overflow:hidden;}
+.loading-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--green2),var(--green),var(--blue));
+  border-radius:99px;transition:width 0.5s;
+}
+.loading-txt{font-size:11px;color:var(--muted);text-align:center;margin-top:5px;}
+
+/* CARD */
+.card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:18px;margin-bottom:12px;
+  transition:border-color 0.2s;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border2),transparent);
+}
+.card:hover{border-color:var(--border2);}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.card-ico{
+  width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.ico-g{background:#00ff8812;border:1px solid #00ff8825;}
+.ico-b{background:#4d9fff12;border:1px solid #4d9fff25;}
+.ico-p{background:#9d7bff12;border:1px solid #9d7bff25;}
+.ico-y{background:#ffd16612;border:1px solid #ffd16625;}
+.card-ttl{font-size:14px;font-weight:700;}
+.card-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* QR */
+.qr-box{text-align:center;padding:6px 0 10px;}
+.qr-wrap{
+  display:inline-block;padding:10px;
+  background:#fff;border-radius:14px;
+  box-shadow:0 0 0 1px #00ff8820, 0 0 40px #00ff8815;
+  margin-bottom:16px;
+  animation:qr-pulse 2.5s ease-in-out infinite;
+}
+@keyframes qr-pulse{
+  0%,100%{box-shadow:0 0 0 1px #00ff8820,0 0 30px #00ff8815;}
+  50%{box-shadow:0 0 0 1px #00ff8840,0 0 50px #00ff8830;}
+}
+#qr-img{width:190px;height:190px;display:block;border-radius:6px;}
+.qr-steps{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;text-align:left;
+}
+.qr-step{display:flex;align-items:flex-start;gap:10px;padding:4px 0;font-size:12px;color:var(--muted);}
+.qr-step b{color:var(--text);}
+.step-n{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--green2),var(--green));
+  color:#000;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;margin-top:1px;
+}
+
+/* SEARCH */
+.search-box{position:relative;margin-bottom:10px;}
+.search-box input{
+  width:100%;background:var(--s2);
+  border:1px solid var(--border);border-radius:10px;
+  padding:9px 12px 9px 36px;
+  color:var(--text);font-size:13px;outline:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  transition:border-color 0.2s;
+}
+.search-box input:focus{border-color:var(--green2);}
+.search-box input::placeholder{color:var(--muted);}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;}
+
+/* CHAT LIST */
+#chat-list{max-height:250px;overflow-y:auto;padding-right:2px;}
+#chat-list::-webkit-scrollbar{width:3px;}
+#chat-list::-webkit-scrollbar-thumb{background:var(--s3);border-radius:99px;}
+.chat-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1.5px solid transparent;
+  border-radius:10px;padding:10px 12px;
+  margin-bottom:6px;cursor:pointer;
+  transition:all 0.15s;
+}
+.chat-item:hover{border-color:var(--border2);background:var(--s3);}
+.chat-item.active{border-color:var(--green2);background:#061410;}
+.chat-av{
+  width:38px;height:38px;border-radius:10px;
+  background:var(--s3);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;flex-shrink:0;color:var(--green);
+}
+.chat-inf{flex:1;min-width:0;}
+.chat-nm{font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-ls{font-size:11px;color:var(--muted);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tag{
+  display:inline-block;font-size:9px;font-weight:700;
+  padding:1px 6px;border-radius:99px;flex-shrink:0;
+}
+.tag-ch{background:#9d7bff18;color:#c4a8ff;border:1px solid #9d7bff30;}
+.tag-gr{background:#4d9fff18;color:#7ab8ff;border:1px solid #4d9fff30;}
+.unread-dot{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--green);color:#000;
+  font-size:9px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+/* LOAD BTN */
+.load-btn{
+  display:flex;align-items:center;gap:6px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:10px;padding:9px 14px;
+  color:var(--muted);font-size:12px;font-weight:600;
+  cursor:pointer;margin-bottom:10px;
+  transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;
+  width:100%;
+}
+.load-btn:hover:not(:disabled){border-color:var(--green2);color:var(--green);}
+.load-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* EMOJI */
+.emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+.emoji-btn{
+  background:var(--s2);border:1.5px solid var(--border);
+  border-radius:10px;font-size:22px;padding:9px 4px;
+  cursor:pointer;text-align:center;line-height:1;
+  transition:all 0.12s;
+}
+.emoji-btn:hover{border-color:var(--green2);transform:scale(1.08);}
+.emoji-btn.on{
+  border-color:var(--green);background:#061410;
+  box-shadow:0 0 12px #00ff8820;transform:scale(1.05);
+}
+
+/* COUNT */
+.count-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.c-pre{
+  background:var(--s2);border:1.5px solid var(--border);
+  border-radius:8px;padding:7px 12px;
+  font-size:12px;font-weight:700;color:var(--muted);
+  cursor:pointer;transition:all 0.12s;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.c-pre:hover{border-color:var(--green2);color:var(--green);}
+.c-pre.on{border-color:var(--green);color:var(--green);background:#061410;}
+.c-inp{
+  flex:1;min-width:70px;
+  background:var(--s2);border:1.5px solid var(--border);
+  border-radius:8px;padding:7px 10px;
+  color:var(--text);font-size:13px;font-weight:700;outline:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  transition:border-color 0.2s;
+}
+.c-inp:focus{border-color:var(--green2);}
+
+/* SUMMARY */
+.summary{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;margin-bottom:12px;
+}
+.sum-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;font-size:13px;
+}
+.sum-row+.sum-row{border-top:1px solid var(--border);}
+.sum-lbl{color:var(--muted);}
+.sum-val{font-weight:700;color:var(--green);}
+
+/* PROGRESS */
+#prog-box{display:none;margin-bottom:12px;}
+.prog-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.prog-lbl{font-size:13px;font-weight:600;}
+.prog-pct{font-size:13px;font-weight:800;color:var(--green);}
+.prog-track{background:var(--s3);border-radius:99px;height:8px;overflow:hidden;border:1px solid var(--border);}
+.prog-fill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,var(--green2),var(--green));
+  border-radius:99px;transition:width 0.3s;
+  position:relative;overflow:hidden;
+}
+.prog-fill::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,#ffffff25,transparent);
+  animation:shine 1.5s infinite;
+}
+@keyframes shine{from{transform:translateX(-100%);}to{transform:translateX(200%);}}
+.prog-sub{text-align:center;font-size:11px;color:var(--muted);margin-top:5px;}
+
+/* BUTTONS */
+.btn{
+  width:100%;padding:14px;border:none;border-radius:11px;
+  font-size:14px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  margin-top:7px;transition:all 0.2s;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.btn-go{
+  background:linear-gradient(135deg,var(--green2),var(--green));
+  color:#000;box-shadow:0 4px 20px #00ff8822;
+}
+.btn-go:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 28px #00ff8835;}
+.btn-go:active:not(:disabled){transform:translateY(0);}
+.btn-stop{background:#1a0810;color:#ff6b8a;border:1px solid #3a1020;}
+.btn-stop:hover:not(:disabled){background:#220a12;}
+.btn-out{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-out:hover:not(:disabled){border-color:var(--muted2);color:var(--text);}
+.btn:disabled{opacity:0.25;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+#stop-btn{display:none;}
+
+/* ALERT */
+.alert{
+  padding:11px 14px;border-radius:10px;
+  font-size:13px;font-weight:500;display:none;
+  margin-top:8px;line-height:1.5;
+}
+.al-ok{background:#061410;border:1px solid #00cc6a30;color:#00ff88;}
+.al-err{background:#110608;border:1px solid #ff4d6d30;color:#ff6b8a;}
+.al-info{background:#080b14;border:1px solid #4d9fff30;color:#7ab8ff;}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:20px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:12px;padding:11px 18px;
+  font-size:13px;font-weight:600;
+  z-index:9999;transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  white-space:nowrap;max-width:88vw;
+  box-shadow:0 8px 40px #00000099;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.t-ok{border-color:#00cc6a40;color:#00ff88;}
+.toast.t-err{border-color:#ff4d6d40;color:#ff6b8a;}
+.toast.t-info{border-color:#4d9fff40;color:#7ab8ff;}
+
+/* EMPTY */
+.empty{text-align:center;padding:20px;color:var(--muted);font-size:13px;}
+
+/* DIVIDER */
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:4px 0 12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="#000">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+    <h1>WA <em>Reaction</em></h1>
+    <p>Kirim reaction otomatis ke pesan saluran</p>
+  </div>
+
+  <!-- Status -->
+  <div id="status-bar" class="status-bar s-disconnected">
+    <div class="dot"></div>
+    <span id="status-txt">Menghubungkan ke WhatsApp...</span>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-wrap" id="loading-wrap">
+    <div class="loading-track"><div class="loading-fill" id="loading-fill"></div></div>
+    <div class="loading-txt" id="loading-txt">Memuat...</div>
+  </div>
+
+  <!-- QR Card -->
+  <div class="card" id="qr-card" style="display:none;">
+    <div class="card-head">
+      <div class="card-ico ico-b">📱</div>
+      <div><div class="card-ttl">Scan QR Code</div><div class="card-sub">Buka WhatsApp → Perangkat Tertaut</div></div>
+    </div>
+    <div class="qr-box">
+      <div class="qr-wrap"><img id="qr-img" src="" width="190" height="190" alt="QR"/></div>
+    </div>
+    <div class="qr-steps">
+      <div class="qr-step"><span class="step-n">1</span><span>Buka <b>WhatsApp</b> di HP kamu</span></div>
+      <div class="qr-step"><span class="step-n">2</span><span>Ketuk <b>⋮ Menu</b> → <b>Perangkat Tertaut</b></span></div>
+      <div class="qr-step"><span class="step-n">3</span><span>Ketuk <b>Tautkan Perangkat</b></span></div>
+      <div class="qr-step"><span class="step-n">4</span><span>Arahkan kamera ke <b>QR di atas</b></span></div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="main-app" style="display:none;">
+
+    <!-- Chat -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico ico-g">💬</div>
+        <div><div class="card-ttl">Pilih Chat / Saluran</div><div class="card-sub">Target pengiriman reaction</div></div>
+      </div>
+      <button class="load-btn" id="load-btn" onclick="loadChats()">🔄 Muat Daftar Chat</button>
+      <div class="search-box" id="search-box" style="display:none;">
+        <span class="search-ico">🔍</span>
+        <input type="text" id="search-inp" placeholder="Cari nama chat..." oninput="filterChats()"/>
+      </div>
+      <div id="chat-list"></div>
+    </div>
+
+    <!-- Emoji -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico ico-p">😀</div>
+        <div><div class="card-ttl">Pilih Emoji</div><div class="card-sub">Tap emoji untuk memilih</div></div>
+      </div>
+      <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+
+    <!-- Jumlah -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico ico-y">🔢</div>
+        <div><div class="card-ttl">Jumlah Reaction</div><div class="card-sub">Maks 1000 per sesi</div></div>
+      </div>
+      <div class="count-row">
+        <button class="c-pre on" onclick="setCount(100,this)">100</button>
+        <button class="c-pre" onclick="setCount(200,this)">200</button>
+        <button class="c-pre" onclick="setCount(300,this)">300</button>
+        <button class="c-pre" onclick="setCount(500,this)">500</button>
+        <input class="c-inp" type="number" id="count-inp" value="100" min="1" max="1000" oninput="onCountChange()"/>
+      </div>
+    </div>
+
+    <!-- Send -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ico ico-g">⚡</div>
+        <div><div class="card-ttl">Kirim Reaction</div><div class="card-sub">Periksa info sebelum kirim</div></div>
+      </div>
+
+      <div class="summary">
+        <div class="sum-row"><span class="sum-lbl">💬 Chat</span><span class="sum-val" id="s-chat">Belum dipilih</span></div>
+        <div class="sum-row"><span class="sum-lbl">😀 Emoji</span><span class="sum-val" id="s-emoji" style="font-size:18px;">—</span></div>
+        <div class="sum-row"><span class="sum-lbl">🔢 Jumlah</span><span class="sum-val" id="s-count">100</span></div>
+      </div>
+
+      <div id="prog-box">
+        <div class="prog-hd">
+          <span class="prog-lbl" id="prog-lbl">Mengirim...</span>
+          <span class="prog-pct" id="prog-pct">0%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+        <div class="prog-sub" id="prog-sub">0 / 0</div>
+      </div>
+
+      <button class="btn btn-go" id="send-btn" onclick="sendReaction()" disabled>
+        ⚡ Kirim Sekarang
+      </button>
+      <button class="btn btn-stop" id="stop-btn" onclick="stopReaction()">
+        ⛔ Stop Pengiriman
+      </button>
+      <div class="alert" id="alert-box"></div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-out" onclick="doLogout()">🚪 Logout WhatsApp</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const socket = io();
+const EMOJIS = ['❤️','👍','😂','😮','😢','🙏','🔥','👏','🎉','💯','😍','😎','🤔','😅','👌','✅','🥰','😭','💪','🙌','⭐','🤩','😱','🫡'];
+let selChat = null, selEmoji = null, selCount = 100;
+let allChats = [], toastTmr = null;
+
+// Build emoji grid
+const grid = document.getElementById('emoji-grid');
+EMOJIS.forEach(em => {
+  const b = document.createElement('button');
+  b.className = 'emoji-btn';
+  b.textContent = em;
+  b.onclick = () => pickEmoji(em, b);
+  grid.appendChild(b);
+});
+
+// Socket
+socket.on('status', ({ state, message }) => updateStatus(state, message));
+socket.on('qr', d => document.getElementById('qr-img').src = d);
+socket.on('loading', ({ percent, message }) => {
+  document.getElementById('loading-wrap').style.display = 'block';
+  document.getElementById('loading-fill').style.width = percent + '%';
+  document.getElementById('loading-txt').textContent = message || 'Memuat...';
+});
+socket.on('reaction_start', ({ total, emoji }) => {
+  showProg(true);
+  document.getElementById('send-btn').style.display = 'none';
+  document.getElementById('stop-btn').style.display = 'flex';
+  toast(`🚀 Mulai ${total} reaction ${emoji}`, 'info');
+});
+socket.on('reaction_progress', ({ current, total, emoji, percent }) => {
+  document.getElementById('prog-fill').style.width = percent + '%';
+  document.getElementById('prog-pct').textContent = percent + '%';
+  document.getElementById('prog-lbl').textContent = emoji + ' Mengirim...';
+  document.getElementById('prog-sub').textContent = current + ' / ' + total;
+});
+socket.on('reaction_done', ({ sent, emoji, note }) => {
+  endSend();
+  document.getElementById('prog-fill').style.width = '100%';
+  document.getElementById('prog-pct').textContent = '100%';
+  document.getElementById('prog-lbl').textContent = '✅ Selesai!';
+  document.getElementById('prog-sub').textContent = sent + ' berhasil';
+  showAlert(`✅ ${sent} reaction ${emoji} berhasil!${note ? ' (' + note + ')' : ''}`, 'ok');
+  toast(`✅ ${sent} reaction selesai!`, 'ok');
+});
+socket.on('reaction_stopped', ({ sent }) => {
+  endSend();
+  showAlert(`⛔ Dihentikan. ${sent||0} sudah terkirim.`, 'info');
+  toast('⛔ Dihentikan', 'info');
+});
+socket.on('reaction_error', ({ message, sent }) => {
+  endSend();
+  showAlert(`❌ ${message}. Terkirim: ${sent||0}`, 'err');
+  toast('❌ ' + message, 'err');
+});
+
+function updateStatus(state, message) {
+  const bar = document.getElementById('status-bar');
+  bar.className = 'status-bar s-' + state;
+  document.getElementById('status-txt').textContent = message;
+  document.getElementById('qr-card').style.display = state === 'qr' ? 'block' : 'none';
+  document.getElementById('main-app').style.display = state === 'ready' ? 'block' : 'none';
+  if (state === 'ready') {
+    document.getElementById('loading-wrap').style.display = 'none';
+    toast('✅ WhatsApp Terhubung!', 'ok');
+  }
+}
+
+function pickEmoji(em, btn) {
+  document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  selEmoji = em;
+  document.getElementById('s-emoji').textContent = em;
+  checkReady();
+}
+
+function pickChat(id, name, el) {
+  document.querySelectorAll('.chat-item').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selChat = id;
+  document.getElementById('s-chat').textContent = name.length > 18 ? name.slice(0,18)+'…' : name;
+  checkReady();
+}
+
+function setCount(n, btn) {
+  document.querySelectorAll('.c-pre').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  selCount = n;
+  document.getElementById('count-inp').value = n;
+  document.getElementById('s-count').textContent = n;
+}
+
+function onCountChange() {
+  document.querySelectorAll('.c-pre').forEach(b => b.classList.remove('on'));
+  const v = parseInt(document.getElementById('count-inp').value) || 100;
+  selCount = v;
+  document.getElementById('s-count').textContent = v;
+}
+
+function checkReady() {
+  document.getElementById('send-btn').disabled = !(selChat && selEmoji);
+}
+
+function filterChats() {
+  const q = document.getElementById('search-inp').value.toLowerCase();
+  renderChats(allChats.filter(c => c.name.toLowerCase().includes(q)));
+}
+
+async function loadChats() {
+  const btn = document.getElementById('load-btn');
+  btn.disabled = true; btn.innerHTML = '⏳ Memuat...';
+  try {
+    const res = await fetch('/api/chats');
+    const data = await res.json();
+    if (data.error) { toast('❌ ' + data.error, 'err'); return; }
+    allChats = data;
+    renderChats(data);
+    if (data.length > 5) document.getElementById('search-box').style.display = 'block';
+  } catch (e) {
+    toast('❌ Gagal: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '🔄 Muat Ulang';
+  }
+}
+
+function renderChats(list) {
+  const el = document.getElementById('chat-list');
+  el.innerHTML = '';
+  if (!list.length) { el.innerHTML = '<div class="empty">😕 Tidak ada chat</div>'; return; }
+  list.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'chat-item';
+    const badge = c.isChannel ? '<span class="tag tag-ch">Saluran</span>' : c.isGroup ? '<span class="tag tag-gr">Grup</span>' : '';
+    const unread = c.unreadCount > 0 ? `<span class="unread-dot">${c.unreadCount}</span>` : '';
+    div.innerHTML = `
+      <div class="chat-av">${x(c.name.charAt(0).toUpperCase())}</div>
+      <div class="chat-inf">
+        <div class="chat-nm">${x(c.name)}${badge}</div>
+        <div class="chat-ls">${x(c.lastMessage)}</div>
+      </div>${unread}`;
+    div.onclick = () => pickChat(c.id, c.name, div);
+    el.appendChild(div);
+  });
+}
+
+async function sendReaction() {
+  if (!selChat || !selEmoji) return;
+  const count = parseInt(document.getElementById('count-inp').value) || 100;
+  if (count < 1 || count > 1000) { toast('❌ Jumlah 1–1000', 'err'); return; }
+  try {
+    const r = await fetch('/api/react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId: selChat, emoji: selEmoji, count })
+    });
+    const d = await r.json();
+    if (!d.success) toast('❌ ' + d.error, 'err');
+  } catch (e) { toast('❌ ' + e.message, 'err'); }
+}
+
+async function stopReaction() {
+  try { await fetch('/api/stop', { method: 'POST' }); } catch(e) {}
+}
+
+async function doLogout() {
+  if (!confirm('Yakin logout WhatsApp?')) return;
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+    toast('✅ Logout berhasil!', 'ok');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+}
+
+function showProg(show) {
+  document.getElementById('prog-box').style.display = show ? 'block' : 'none';
+  if (show) {
+    document.getElementById('prog-fill').style.width = '0%';
+    document.getElementById('prog-pct').textContent = '0%';
+    document.getElementById('prog-sub').textContent = '0 / 0';
+  }
+}
+
+function endSend() {
+  document.getElementById('send-btn').style.display = 'flex';
+  document.getElementById('stop-btn').style.display = 'none';
+  checkReady();
+}
+
+function showAlert(msg, type) {
+  const b = document.getElementById('alert-box');
+  b.className = 'alert al-' + type;
+  b.textContent = msg;
+  b.style.display = 'block';
+  if (type !== 'err') setTimeout(() => b.style.display = 'none', 6000);
+}
+
+function toast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.className = 'toast t-' + type;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function x(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
